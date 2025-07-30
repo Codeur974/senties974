@@ -160,7 +160,7 @@ const [user, setUser] = useState(null);
               {isLoggedIn ? (
                 <div className="flex items-center justify-between">
                   <span className="py-2 text-green-200">
-                    Bonjour, {user?.name}
+                   Bonjour, {user?.name || 'Utilisateur'}
                   </span>
                   <button
                     onClick={handleLogout}
