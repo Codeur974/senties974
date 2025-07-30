@@ -1,14 +1,37 @@
+require("dotenv").config(); // ← charger .env
 const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+
 const app = express();
 const PORT = process.env.PORT || 4001;
 
+// Middleware
 app.use(express.json());
-app.use(require("cors")());
+app.use(cors());
 
+// Routes
 app.get("/", (req, res) => {
-  res.send("Backend API is working!");
+  res.send("API Backend Sentiers974 fonctionne !");
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+app.use("/api/auth", require("./routes/auth"));
+app.use("/api/activities", require("./routes/activities"));
+app.use("/api/user", require("./routes/user"));
+
+// MongoDB connection
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ Échec de connexion à MongoDB:", err);
+  });
+// Gestion d'erreurs globale
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: "Erreur serveur" });
 });
