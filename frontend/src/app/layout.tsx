@@ -23,7 +23,13 @@ export default function RootLayout({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-const [user, setUser] = useState<{_id: string, name: string, email: string} | null>(null);
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+}
+
+const [user, setUser] = useState<User | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
