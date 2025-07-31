@@ -26,7 +26,7 @@ export default function Register() {
 
     try {
       const response = await fetch(
-        "http://192.168.1.12:4001/api/auth/register",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`,
         {
           method: "POST",
           headers: {
@@ -183,7 +183,7 @@ export default function Register() {
             disabled={isLoading}
             className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200"
           >
-            {isLoading ? "Inscription..." : "S&apos;inscrire"}
+            {isLoading ? "Inscription..." : "S'inscrire"}
           </button>
         </form>
 

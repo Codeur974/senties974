@@ -27,13 +27,16 @@ function LoginForm() {
     setError("");
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        }
+      );
 
       const data = await response.json();
 
@@ -150,7 +153,7 @@ function LoginForm() {
               href="/register"
               className="text-green-600 hover:text-green-700 font-semibold"
             >
-              S&apos;inscrire
+              S'inscrire
             </Link>
           </p>
         </div>

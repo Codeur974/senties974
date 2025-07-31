@@ -54,7 +54,7 @@ export default function Dashboard() {
       try {
         // Vérifier le token côté serveur
         const response = await fetch(
-          "http://192.168.1.12:4001/api/auth/verify",
+          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify`,
           {
             method: "GET",
             headers: {
