@@ -21,7 +21,7 @@ app.use("/api/user", require("./routes/user"));
 
 // MongoDB connection
 mongoose
-  .connect(process.env.MONGODB_URI) // ← Changer MONGO_URI en MONGODB_URI
+  .connect(process.env.MONGO_URL) // ← Utiliser MONGO_URL de Railway
   .then(() => {
     app.listen(PORT, () => {
       console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
