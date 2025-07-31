@@ -15,6 +15,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+interface User {
+  name: string;
+  email: string;
+  _id?: string;
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -22,7 +28,7 @@ export default function RootLayout({
 }>) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
