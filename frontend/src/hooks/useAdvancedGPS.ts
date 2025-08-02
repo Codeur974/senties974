@@ -37,8 +37,6 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
 
   const positions = useRef<AdvancedPosition[]>([]);
   const lastAltitude = useRef<number | null>(null);
-  const speedHistory = useRef<number[]>([]);
-  const lastSpeedUpdate = useRef<number>(0);
 
   const calculateElevation = (newAltitude: number) => {
     if (lastAltitude.current !== null) {
@@ -56,53 +54,31 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
   };
 
   const calculateSpeed = (newPosition: AdvancedPosition) => {
+    // SOLUTION SIMPLE : Utiliser la vitesse GPS native du téléphone
+    const nativeSpeed = newPosition.speed; // m/s
+    
+    if (nativeSpeed && nativeSpeed > 0) {
+      setCurrentSpeed(nativeSpeed);
+      setMaxSpeed((prev) => Math.max(prev, nativeSpeed));
+    }
+
+    // Calculer la vitesse moyenne sur tout le trajet
     if (positions.current.length > 0) {
-      const lastPos = positions.current[positions.current.length - 1];
-      const timeDiff = (newPosition.timestamp - lastPos.timestamp) / 1000; // en secondes
-
-      if (timeDiff > 0) {
-        const distance = calculateDistance(lastPos, newPosition);
-        const instantSpeed = distance / timeDiff; // m/s
-
-        // FILTRAGE INTELLIGENT : Utiliser plusieurs points pour lisser la vitesse
-        if (instantSpeed > 0.01) {
-          // Seuil très bas pour détecter tout mouvement
-          speedHistory.current.push(instantSpeed);
-
-          // Garder seulement les 5 dernières vitesses
-          if (speedHistory.current.length > 5) {
-            speedHistory.current.shift();
+      const totalDistance = positions.current.reduce(
+        (total, pos, index) => {
+          if (index > 0) {
+            return (
+              total + calculateDistance(positions.current[index - 1], pos)
+            );
           }
+          return total;
+        },
+        0
+      );
 
-          // Calculer la vitesse moyenne sur les derniers points
-          const avgSpeed =
-            speedHistory.current.reduce((a, b) => a + b, 0) /
-            speedHistory.current.length;
-
-          // Filtrer les valeurs aberrantes
-          const filteredSpeed = Math.min(avgSpeed, 10.0); // Max 36 km/h
-
-          setCurrentSpeed(filteredSpeed);
-          setMaxSpeed((prev) => Math.max(prev, filteredSpeed));
-
-          // Calculer la vitesse moyenne sur tout le trajet
-          const totalDistance = positions.current.reduce(
-            (total, pos, index) => {
-              if (index > 0) {
-                return (
-                  total + calculateDistance(positions.current[index - 1], pos)
-                );
-              }
-              return total;
-            },
-            0
-          );
-
-          const totalTime =
-            (newPosition.timestamp - positions.current[0].timestamp) / 1000;
-          setAverageSpeed(totalTime > 0 ? totalDistance / totalTime : 0);
-        }
-      }
+      const totalTime =
+        (newPosition.timestamp - positions.current[0].timestamp) / 1000;
+      setAverageSpeed(totalTime > 0 ? totalDistance / totalTime : 0);
     }
   };
 
@@ -129,8 +105,6 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
       setIsTracking(true);
       positions.current = [];
       lastAltitude.current = null;
-      speedHistory.current = [];
-      lastSpeedUpdate.current = Date.now();
 
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
@@ -139,7 +113,7 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
             longitude: position.coords.longitude,
             altitude: position.coords.altitude || 0,
             accuracy: position.coords.accuracy,
-            speed: position.coords.speed || 0,
+            speed: position.coords.speed || 0, // VITESSE NATIVE
             heading: position.coords.heading || 0,
             timestamp: position.timestamp,
           };
