@@ -68,33 +68,38 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
         // UTILISER LA MEILLEURE VITESSE
         let finalSpeed = 0;
 
-        if (nativeSpeed && nativeSpeed > 0.5) {
-          // Si vitesse native fiable (> 0.5 m/s), l'utiliser
+        // AMÉLIORATION : Seuils plus adaptés pour la course
+        if (nativeSpeed && nativeSpeed > 0.3) {
+          // Si vitesse native fiable (> 0.3 m/s), l'utiliser
           finalSpeed = nativeSpeed;
-        } else if (calculatedSpeed > 0.1) {
-          // Sinon, utiliser notre calcul si mouvement détecté
+        } else if (calculatedSpeed > 0.05) {
+          // Seuil plus bas pour détecter plus de mouvements
           finalSpeed = calculatedSpeed;
         }
 
         // LISSAGE ADAPTATIF : Plus réactif pour les changements rapides
         if (finalSpeed > 0) {
-          let smoothingFactor = 0.3; // 30% par défaut (plus réactif)
-
+          let smoothingFactor = 0.5; // 50% par défaut (plus réactif)
+          
           // Si la vitesse change beaucoup, être plus réactif
           const speedChange = Math.abs(finalSpeed - currentSpeed);
-          if (speedChange > 1.0) {
-            // Changement de plus de 1 m/s
-            smoothingFactor = 0.8; // 80% - très réactif
-          } else if (speedChange > 0.5) {
-            // Changement de plus de 0.5 m/s
-            smoothingFactor = 0.6; // 60% - réactif
+          if (speedChange > 0.8) {
+            // Changement de plus de 0.8 m/s (3 km/h)
+            smoothingFactor = 0.9; // 90% - très réactif
+          } else if (speedChange > 0.4) {
+            // Changement de plus de 0.4 m/s (1.4 km/h)
+            smoothingFactor = 0.7; // 70% - réactif
           }
-
+          
           const smoothedSpeed =
             currentSpeed * (1 - smoothingFactor) + finalSpeed * smoothingFactor;
 
-          setCurrentSpeed(smoothedSpeed);
-          setMaxSpeed((prev) => Math.max(prev, smoothedSpeed));
+          // AMÉLIORATION : Permettre des vitesses plus élevées
+          const maxSpeed = 15.0; // 15 m/s = 54 km/h max
+          const limitedSpeed = Math.min(smoothedSpeed, maxSpeed);
+
+          setCurrentSpeed(limitedSpeed);
+          setMaxSpeed((prev) => Math.max(prev, limitedSpeed));
         }
       }
     }
