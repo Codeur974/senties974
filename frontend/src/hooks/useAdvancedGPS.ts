@@ -70,7 +70,8 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
           const timeDiff = now - lastMovementTime.current;
 
           // SEUIL ENCORE PLUS ÉLEVÉ pour éviter les faux mouvements
-          if (magnitude > 2.0 && timeDiff > 500) { // Seuil très élevé + délai très long
+          if (magnitude > 2.0 && timeDiff > 500) {
+            // Seuil très élevé + délai très long
             movementHistory.current.push(magnitude);
 
             // Garder seulement les 3 derniers mouvements

@@ -104,7 +104,7 @@ export const useWeather = (): UseWeatherReturn => {
     };
   };
 
-  // NOUVEAU : Initialiser la météo au chargement
+  // SOLUTION QUI MARCHAIT : Initialiser la météo au chargement
   useEffect(() => {
     if (!weather) {
       // Détecter automatiquement la position sur mobile
@@ -112,7 +112,8 @@ export const useWeather = (): UseWeatherReturn => {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const { latitude, longitude } = position.coords;
-            fetchWeather(latitude, longitude);
+            // UTILISER DIRECTEMENT la détection automatique
+            setWeather(getLocationBasedWeather(latitude, longitude));
           },
           (error) => {
             console.log("GPS non disponible:", error);
@@ -133,31 +134,13 @@ export const useWeather = (): UseWeatherReturn => {
     setError(null);
 
     try {
-      // CORRECTION : Utiliser les coordonnées dans l'API
-      const response = await fetch(`https://wttr.in/${lat},${lng}?format=j1&lang=fr`);
-
-      if (!response.ok) {
-        throw new Error("Erreur lors de la récupération de la météo");
-      }
-
-      const data = await response.json();
-      const current = data.current_condition[0];
-
-      const weatherData: WeatherData = {
-        temperature: parseInt(current.temp_C),
-        conditions: current.lang_fr[0].value,
-        humidity: parseInt(current.humidity),
-        windSpeed: parseInt(current.windspeedKmph),
-        pressure: parseInt(current.pressure),
-        icon: current.weatherIconUrl[0].value,
-      };
-
-      setWeather(weatherData);
+      // SUPPRIMER l'API wttr.in qui ne marche pas
+      // Utiliser directement la détection automatique
+      setWeather(getLocationBasedWeather(lat, lng));
     } catch (err) {
       console.error("Erreur météo:", err);
       setError("Impossible de récupérer la météo");
-
-      // IMPORTANT : Utiliser la nouvelle fonction avec les coordonnées
+      // Fallback
       setWeather(getLocationBasedWeather(lat, lng));
     } finally {
       setIsLoading(false);
