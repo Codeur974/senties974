@@ -37,8 +37,8 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
 
   const positions = useRef<AdvancedPosition[]>([]);
   const lastAltitude = useRef<number | null>(null);
-  const stepCount = useRef(0);
-  const lastStepTime = useRef(0);
+  const startTime = useRef<number>(0);
+  const totalDistance = useRef<number>(0);
 
   const calculateElevation = (newAltitude: number) => {
     if (lastAltitude.current !== null) {
@@ -55,54 +55,6 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
     setElevation(newAltitude);
   };
 
-  // NOUVEAU : Estimer la vitesse basée sur les pas
-  const estimateSpeedFromSteps = () => {
-    const now = Date.now();
-    const timeSinceLastStep = now - lastStepTime.current;
-
-    if (timeSinceLastStep < 1000) {
-      // Si moins d'1 seconde depuis le dernier pas
-      // Vitesse basée sur la fréquence des pas
-      const stepsPerSecond = 1000 / timeSinceLastStep;
-      const estimatedSpeed = stepsPerSecond * 0.7; // 0.7 m par pas
-      return Math.min(estimatedSpeed, 2.0); // Max 2 m/s (7.2 km/h)
-    }
-
-    return 0;
-  };
-
-  // NOUVEAU : Détecter les pas avec l'accéléromètre
-  const detectSteps = () => {
-    if ("DeviceMotionEvent" in window) {
-      const handleMotion = (event: DeviceMotionEvent) => {
-        const acceleration = event.acceleration;
-        if (acceleration) {
-          const { x, y, z } = acceleration;
-          const magnitude = Math.sqrt(
-            (x || 0) ** 2 + (y || 0) ** 2 + (z || 0) ** 2
-          );
-
-          const now = Date.now();
-          const timeDiff = now - lastStepTime.current;
-
-          // Détecter un pas
-          if (magnitude > 2.0 && timeDiff > 500) {
-            stepCount.current++;
-            lastStepTime.current = now;
-
-            // Estimer la vitesse basée sur les pas
-            const stepSpeed = estimateSpeedFromSteps();
-            setCurrentSpeed(stepSpeed);
-            setMaxSpeed((prev) => Math.max(prev, stepSpeed));
-          }
-        }
-      };
-
-      window.addEventListener("devicemotion", handleMotion);
-      return () => window.removeEventListener("devicemotion", handleMotion);
-    }
-  };
-
   const calculateSpeed = (newPosition: AdvancedPosition) => {
     if (positions.current.length > 0) {
       const lastPos = positions.current[positions.current.length - 1];
@@ -110,27 +62,33 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
 
       if (timeDiff > 0) {
         const distance = calculateDistance(lastPos, newPosition);
-        const gpsSpeed = distance / timeDiff; // m/s
+        totalDistance.current += distance;
 
-        // Utiliser GPS pour les vitesses élevées, pas pour les vitesses faibles
-        if (gpsSpeed > 1.0) {
-          // Plus de 3.6 km/h
-          setCurrentSpeed(gpsSpeed);
-          setMaxSpeed((prev) => Math.max(prev, gpsSpeed));
+        // Calculer la vitesse instantanée
+        const instantSpeed = distance / timeDiff; // m/s
+
+        // Calculer la vitesse moyenne sur tout le trajet
+        const totalTime = (newPosition.timestamp - startTime.current) / 1000;
+        const averageSpeedValue =
+          totalTime > 0 ? totalDistance.current / totalTime : 0;
+
+        // Utiliser la vitesse instantanée si elle est fiable, sinon la moyenne
+        let finalSpeed = instantSpeed;
+
+        // Si la vitesse instantanée est trop faible mais qu'on a bougé, utiliser une estimation
+        if (instantSpeed < 0.1 && totalDistance.current > 5) {
+          // Plus de 5m parcourus
+          finalSpeed = averageSpeedValue;
         }
-        // Sinon, garder la vitesse basée sur les pas
 
-        // Calculer la vitesse moyenne
-        const totalDistance = positions.current.reduce((total, pos, index) => {
-          if (index > 0) {
-            return total + calculateDistance(positions.current[index - 1], pos);
-          }
-          return total;
-        }, 0);
+        // Filtrer les vitesses aberrantes
+        if (finalSpeed > 0.01) {
+          // Seuil très bas
+          setCurrentSpeed(finalSpeed);
+          setMaxSpeed((prev) => Math.max(prev, finalSpeed));
+        }
 
-        const totalTime =
-          (newPosition.timestamp - positions.current[0].timestamp) / 1000;
-        setAverageSpeed(totalTime > 0 ? totalDistance / totalTime : 0);
+        setAverageSpeed(averageSpeedValue);
       }
     }
   };
@@ -158,11 +116,8 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
       setIsTracking(true);
       positions.current = [];
       lastAltitude.current = null;
-      stepCount.current = 0;
-      lastStepTime.current = Date.now();
-
-      // Démarrer la détection des pas
-      const cleanupSteps = detectSteps();
+      startTime.current = Date.now();
+      totalDistance.current = 0;
 
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
@@ -193,10 +148,7 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
         }
       );
 
-      return () => {
-        navigator.geolocation.clearWatch(watchId);
-        if (cleanupSteps) cleanupSteps();
-      };
+      return () => navigator.geolocation.clearWatch(watchId);
     }
   };
 
