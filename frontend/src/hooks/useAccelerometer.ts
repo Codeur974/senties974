@@ -32,11 +32,11 @@ export const useAccelerometer = (): UseAccelerometerReturn => {
 
   // Détecter les pas basés sur l'accélération
   const detectStep = (currentAcceleration: Acceleration) => {
-    const threshold = 1.2; // Seuil pour détecter un pas
+    const threshold = 2.5; // SEUIL TRÈS ÉLEVÉ pour éviter les faux pas
     const now = Date.now();
 
-    if (currentAcceleration.magnitude > threshold && now - lastStepTime > 300) {
-      // Min 300ms entre les pas
+    if (currentAcceleration.magnitude > threshold && now - lastStepTime > 800) {
+      // DÉLAI TRÈS LONG : 800ms entre les pas
       setStepCount((prev) => prev + 1);
       setLastStepTime(now);
 
@@ -48,7 +48,7 @@ export const useAccelerometer = (): UseAccelerometerReturn => {
 
   // Détecter le mouvement
   const detectMovement = (currentAcceleration: Acceleration) => {
-    const movementThreshold = 0.5;
+    const movementThreshold = 1.0; // SEUIL PLUS ÉLEVÉ
     setIsMoving(currentAcceleration.magnitude > movementThreshold);
   };
 

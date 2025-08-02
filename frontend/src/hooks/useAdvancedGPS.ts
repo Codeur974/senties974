@@ -37,8 +37,6 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
 
   const positions = useRef<AdvancedPosition[]>([]);
   const lastAltitude = useRef<number | null>(null);
-  const movementHistory = useRef<number[]>([]);
-  const lastMovementTime = useRef<number>(0);
 
   const calculateElevation = (newAltitude: number) => {
     if (lastAltitude.current !== null) {
@@ -55,52 +53,6 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
     setElevation(newAltitude);
   };
 
-  // NOUVEAU : Détecter le mouvement avec l'accéléromètre
-  const detectMovementFromAccelerometer = () => {
-    if ("DeviceMotionEvent" in window) {
-      const handleMotion = (event: DeviceMotionEvent) => {
-        const acceleration = event.acceleration;
-        if (acceleration) {
-          const { x, y, z } = acceleration;
-          const magnitude = Math.sqrt(
-            (x || 0) ** 2 + (y || 0) ** 2 + (z || 0) ** 2
-          );
-
-          const now = Date.now();
-          const timeDiff = now - lastMovementTime.current;
-
-          // SEUIL ENCORE PLUS ÉLEVÉ pour éviter les faux mouvements
-          if (magnitude > 2.0 && timeDiff > 500) {
-            // Seuil très élevé + délai très long
-            movementHistory.current.push(magnitude);
-
-            // Garder seulement les 3 derniers mouvements
-            if (movementHistory.current.length > 3) {
-              movementHistory.current.shift();
-            }
-
-            // RÉDUIRE ENCORE PLUS le multiplicateur
-            const avgMovement =
-              movementHistory.current.reduce((a, b) => a + b, 0) /
-              movementHistory.current.length;
-            const estimatedSpeed = Math.min(avgMovement * 0.3, 1.5); // Multiplicateur très faible
-
-            setCurrentSpeed(estimatedSpeed);
-            setMaxSpeed((prev) => Math.max(prev, estimatedSpeed));
-
-            lastMovementTime.current = now;
-          } else {
-            // Pas de mouvement détecté
-            setCurrentSpeed(0);
-          }
-        }
-      };
-
-      window.addEventListener("devicemotion", handleMotion);
-      return () => window.removeEventListener("devicemotion", handleMotion);
-    }
-  };
-
   const calculateSpeed = (newPosition: AdvancedPosition) => {
     if (positions.current.length > 0) {
       const lastPos = positions.current[positions.current.length - 1];
@@ -110,15 +62,26 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
         const distance = calculateDistance(lastPos, newPosition);
         const gpsSpeed = distance / timeDiff; // m/s
 
-        // Combiner GPS et accéléromètre pour plus de fiabilité
-        const currentAccelSpeed = currentSpeed;
-        const combinedSpeed = gpsSpeed > 0.5 ? gpsSpeed : currentAccelSpeed;
+        // AMÉLIORATION : Filtrer les vitesses aberrantes
+        const minSpeed = 0.05; // 0.05 m/s minimum (0.18 km/h)
+        const maxSpeed = 20.0; // 20 m/s maximum (72 km/h)
+        
+        let filteredSpeed = gpsSpeed;
+        
+        // Si la vitesse est trop faible, on la met à 0
+        if (gpsSpeed < minSpeed) {
+          filteredSpeed = 0;
+        }
+        // Si la vitesse est trop élevée, on la limite
+        else if (gpsSpeed > maxSpeed) {
+          filteredSpeed = maxSpeed;
+        }
 
-        setCurrentSpeed(combinedSpeed);
-        setMaxSpeed((prev) => Math.max(prev, combinedSpeed));
+        setCurrentSpeed(filteredSpeed);
+        setMaxSpeed((prev) => Math.max(prev, filteredSpeed));
 
-        // Calculer la vitesse moyenne
-        if (combinedSpeed > 0) {
+        // Calculer la vitesse moyenne seulement si on bouge
+        if (filteredSpeed > 0) {
           const totalDistance = positions.current.reduce(
             (total, pos, index) => {
               if (index > 0) {
@@ -162,11 +125,6 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
       setIsTracking(true);
       positions.current = [];
       lastAltitude.current = null;
-      movementHistory.current = [];
-      lastMovementTime.current = Date.now();
-
-      // Démarrer la détection de mouvement
-      const cleanupMotion = detectMovementFromAccelerometer();
 
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
@@ -197,10 +155,7 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
         }
       );
 
-      return () => {
-        navigator.geolocation.clearWatch(watchId);
-        if (cleanupMotion) cleanupMotion();
-      };
+      return () => navigator.geolocation.clearWatch(watchId);
     }
   };
 
