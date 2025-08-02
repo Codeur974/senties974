@@ -37,6 +37,8 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
 
   const positions = useRef<AdvancedPosition[]>([]);
   const lastAltitude = useRef<number | null>(null);
+  const movementHistory = useRef<number[]>([]);
+  const lastMovementTime = useRef<number>(0);
 
   const calculateElevation = (newAltitude: number) => {
     if (lastAltitude.current !== null) {
@@ -53,6 +55,51 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
     setElevation(newAltitude);
   };
 
+  // NOUVEAU : Détecter le mouvement avec l'accéléromètre
+  const detectMovementFromAccelerometer = () => {
+    if ("DeviceMotionEvent" in window) {
+      const handleMotion = (event: DeviceMotionEvent) => {
+        const acceleration = event.acceleration;
+        if (acceleration) {
+          const { x, y, z } = acceleration;
+          const magnitude = Math.sqrt(
+            (x || 0) ** 2 + (y || 0) ** 2 + (z || 0) ** 2
+          );
+
+          const now = Date.now();
+          const timeDiff = now - lastMovementTime.current;
+
+          // AUGMENTER le seuil pour éviter les faux mouvements
+          if (magnitude > 1.2 && timeDiff > 200) { // Seuil plus élevé + délai plus long
+            movementHistory.current.push(magnitude);
+
+            // Garder seulement les 5 derniers mouvements (au lieu de 10)
+            if (movementHistory.current.length > 5) {
+              movementHistory.current.shift();
+            }
+
+            // RÉDUIRE le multiplicateur pour une vitesse plus réaliste
+            const avgMovement =
+              movementHistory.current.reduce((a, b) => a + b, 0) /
+              movementHistory.current.length;
+            const estimatedSpeed = Math.min(avgMovement * 0.8, 2.0); // Multiplicateur réduit + max plus bas
+
+            setCurrentSpeed(estimatedSpeed);
+            setMaxSpeed((prev) => Math.max(prev, estimatedSpeed));
+
+            lastMovementTime.current = now;
+          } else {
+            // Pas de mouvement détecté
+            setCurrentSpeed(0);
+          }
+        }
+      };
+
+      window.addEventListener("devicemotion", handleMotion);
+      return () => window.removeEventListener("devicemotion", handleMotion);
+    }
+  };
+
   const calculateSpeed = (newPosition: AdvancedPosition) => {
     if (positions.current.length > 0) {
       const lastPos = positions.current[positions.current.length - 1];
@@ -60,22 +107,33 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
 
       if (timeDiff > 0) {
         const distance = calculateDistance(lastPos, newPosition);
-        const speed = distance / timeDiff; // m/s
+        const gpsSpeed = distance / timeDiff; // m/s
 
-        setCurrentSpeed(speed);
-        setMaxSpeed((prev) => Math.max(prev, speed));
+        // Combiner GPS et accéléromètre pour plus de fiabilité
+        const currentAccelSpeed = currentSpeed;
+        const combinedSpeed = gpsSpeed > 0.5 ? gpsSpeed : currentAccelSpeed;
+
+        setCurrentSpeed(combinedSpeed);
+        setMaxSpeed((prev) => Math.max(prev, combinedSpeed));
 
         // Calculer la vitesse moyenne
-        const totalDistance = positions.current.reduce((total, pos, index) => {
-          if (index > 0) {
-            return total + calculateDistance(positions.current[index - 1], pos);
-          }
-          return total;
-        }, 0);
+        if (combinedSpeed > 0) {
+          const totalDistance = positions.current.reduce(
+            (total, pos, index) => {
+              if (index > 0) {
+                return (
+                  total + calculateDistance(positions.current[index - 1], pos)
+                );
+              }
+              return total;
+            },
+            0
+          );
 
-        const totalTime =
-          (newPosition.timestamp - positions.current[0].timestamp) / 1000;
-        setAverageSpeed(totalTime > 0 ? totalDistance / totalTime : 0);
+          const totalTime =
+            (newPosition.timestamp - positions.current[0].timestamp) / 1000;
+          setAverageSpeed(totalTime > 0 ? totalDistance / totalTime : 0);
+        }
       }
     }
   };
@@ -103,6 +161,11 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
       setIsTracking(true);
       positions.current = [];
       lastAltitude.current = null;
+      movementHistory.current = [];
+      lastMovementTime.current = Date.now();
+
+      // Démarrer la détection de mouvement
+      const cleanupMotion = detectMovementFromAccelerometer();
 
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
@@ -133,7 +196,10 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
         }
       );
 
-      return () => navigator.geolocation.clearWatch(watchId);
+      return () => {
+        navigator.geolocation.clearWatch(watchId);
+        if (cleanupMotion) cleanupMotion();
+      };
     }
   };
 
