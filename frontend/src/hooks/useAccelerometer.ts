@@ -62,7 +62,7 @@ export const useAccelerometer = (): UseAccelerometerReturn => {
         const x = acceleration?.x ?? 0;
         const y = acceleration?.y ?? 0;
         const z = acceleration?.z ?? 0;
-        
+
         const magnitude = Math.sqrt(x * x + y * y + z * z);
 
         const newAcceleration = { x, y, z, magnitude };
