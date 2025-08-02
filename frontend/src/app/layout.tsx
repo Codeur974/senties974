@@ -138,15 +138,15 @@ export default function RootLayout({
                     Dashboard
                   </Link>
                   <Link
-                    href="/activites"
+                    href="/activites-sauvegardees"
                     className={`block py-2 transition-colors ${
-                      isActive("/activites")
+                      isActive("/activites-sauvegardees")
                         ? "text-green-300 font-semibold"
                         : "hover:text-green-200"
                     }`}
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Mes Activités
+                    📊 Mes performances
                   </Link>
                   <Link
                     href="/profil"
@@ -230,14 +230,14 @@ export default function RootLayout({
                     Dashboard
                   </Link>
                   <Link
-                    href="/activites"
+                    href="/activites-sauvegardees"
                     className={`transition-colors ${
-                      isActive("/activites")
+                      isActive("/activites-sauvegardees")
                         ? "text-green-300 font-semibold"
                         : "hover:text-green-200"
                     }`}
                   >
-                    Mes Activités
+                    📊 Mes performances
                   </Link>
                   <Link
                     href="/profil"
