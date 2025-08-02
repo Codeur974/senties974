@@ -54,27 +54,48 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
   };
 
   const calculateSpeed = (newPosition: AdvancedPosition) => {
-    // SOLUTION SIMPLE : Utiliser la vitesse GPS native du téléphone
+    // SOLUTION AMÉLIORÉE : Combiner vitesse native + calcul manuel
     const nativeSpeed = newPosition.speed; // m/s
-    
-    if (nativeSpeed && nativeSpeed > 0) {
-      setCurrentSpeed(nativeSpeed);
-      setMaxSpeed((prev) => Math.max(prev, nativeSpeed));
+
+    if (positions.current.length > 0) {
+      const lastPos = positions.current[positions.current.length - 1];
+      const timeDiff = (newPosition.timestamp - lastPos.timestamp) / 1000; // en secondes
+
+      if (timeDiff > 0) {
+        const distance = calculateDistance(lastPos, newPosition);
+        const calculatedSpeed = distance / timeDiff; // m/s
+
+        // UTILISER LA MEILLEURE VITESSE
+        let finalSpeed = 0;
+
+        if (nativeSpeed && nativeSpeed > 0.5) {
+          // Si vitesse native fiable (> 0.5 m/s), l'utiliser
+          finalSpeed = nativeSpeed;
+        } else if (calculatedSpeed > 0.1) {
+          // Sinon, utiliser notre calcul si mouvement détecté
+          finalSpeed = calculatedSpeed;
+        }
+
+        // LISSAGE pour éviter les sauts
+        if (finalSpeed > 0) {
+          const smoothingFactor = 0.7; // 70% de la nouvelle valeur
+          const smoothedSpeed =
+            currentSpeed * (1 - smoothingFactor) + finalSpeed * smoothingFactor;
+
+          setCurrentSpeed(smoothedSpeed);
+          setMaxSpeed((prev) => Math.max(prev, smoothedSpeed));
+        }
+      }
     }
 
     // Calculer la vitesse moyenne sur tout le trajet
     if (positions.current.length > 0) {
-      const totalDistance = positions.current.reduce(
-        (total, pos, index) => {
-          if (index > 0) {
-            return (
-              total + calculateDistance(positions.current[index - 1], pos)
-            );
-          }
-          return total;
-        },
-        0
-      );
+      const totalDistance = positions.current.reduce((total, pos, index) => {
+        if (index > 0) {
+          return total + calculateDistance(positions.current[index - 1], pos);
+        }
+        return total;
+      }, 0);
 
       const totalTime =
         (newPosition.timestamp - positions.current[0].timestamp) / 1000;
