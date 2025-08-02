@@ -1,11 +1,11 @@
 "use client";
 
-import { WalkingMetrics } from "@/types/metrics";
-import { useEffect, useState } from "react";
 import { useAccelerometer } from "@/hooks/useAccelerometer";
 import { useAdvancedGPS } from "@/hooks/useAdvancedGPS";
 import { useIntensityDetection } from "@/hooks/useIntensityDetection";
 import { useWeather } from "@/hooks/useWeather";
+import { WalkingMetrics } from "@/types/metrics";
+import { useEffect, useState } from "react";
 import DistanceDisplay from "../DistanceDisplay";
 import Timer from "../Timer";
 
@@ -59,7 +59,7 @@ export default function WalkingInterface({
   // Calculer les calories basées sur l'intensité réelle
   const calculateCalories = () => {
     if (!isActive) return metrics.calories;
-    
+
     const activeMinutes = time / 60;
     const caloriesPerMinute = intensity.intensity.caloriesPerMinute * 0.6; // Marche moins intense
     return Math.round(activeMinutes * caloriesPerMinute);
@@ -92,10 +92,22 @@ export default function WalkingInterface({
           conditions: "Ensoleillé",
         },
       };
-      
+
       setMetrics(newMetrics);
     }
-  }, [time, distance, isActive, gps.averageSpeed, gps.maxSpeed, gps.elevation, gps.totalAscent, gps.totalDescent, intensity, accelerometer.stepRate, weather.weather]);
+  }, [
+    time,
+    distance,
+    isActive,
+    gps.averageSpeed,
+    gps.maxSpeed,
+    gps.elevation,
+    gps.totalAscent,
+    gps.totalDescent,
+    intensity,
+    accelerometer.stepRate,
+    weather.weather,
+  ]);
 
   // Démarrer le tracking GPS
   useEffect(() => {
@@ -133,11 +145,24 @@ export default function WalkingInterface({
 
       {/* Indicateur de capteurs */}
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className={`p-2 rounded ${accelerometer.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          📱 Accéléromètre: {accelerometer.isAvailable ? 'Disponible' : 'Non disponible'}
+        <div
+          className={`p-2 rounded ${
+            accelerometer.isAvailable
+              ? "bg-green-100 text-green-800"
+              : "bg-red-100 text-red-800"
+          }`}
+        >
+          📱 Accéléromètre:{" "}
+          {accelerometer.isAvailable ? "Disponible" : "Non disponible"}
         </div>
-        <div className={`p-2 rounded ${gps.isTracking ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-          🗺️ GPS: {gps.isTracking ? 'Actif' : 'Inactif'}
+        <div
+          className={`p-2 rounded ${
+            gps.isTracking
+              ? "bg-green-100 text-green-800"
+              : "bg-yellow-100 text-yellow-800"
+          }`}
+        >
+          🗺️ GPS: {gps.isTracking ? "Actif" : "Inactif"}
         </div>
       </div>
 
@@ -228,20 +253,26 @@ export default function WalkingInterface({
       <div className="bg-gray-50 p-4 rounded-lg">
         <div className="flex items-center justify-between mb-2">
           <span className="font-semibold">Intensité de l'effort</span>
-          <span className="text-sm text-gray-600">{intensity.effortScore}%</span>
+          <span className="text-sm text-gray-600">
+            {intensity.effortScore}%
+          </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
+          <div
             className={`h-2 rounded-full transition-all duration-300 ${
-              intensity.intensity.level === 'low' ? 'bg-green-500' :
-              intensity.intensity.level === 'medium' ? 'bg-yellow-500' :
-              intensity.intensity.level === 'high' ? 'bg-orange-500' : 'bg-red-500'
+              intensity.intensity.level === "low"
+                ? "bg-green-500"
+                : intensity.intensity.level === "medium"
+                ? "bg-yellow-500"
+                : intensity.intensity.level === "high"
+                ? "bg-orange-500"
+                : "bg-red-500"
             }`}
             style={{ width: `${intensity.effortScore}%` }}
           ></div>
         </div>
         <div className="text-xs text-gray-600 mt-1">
-          Niveau: {intensity.intensity.level.replace('_', ' ')}
+          Niveau: {intensity.intensity.level.replace("_", " ")}
         </div>
       </div>
 

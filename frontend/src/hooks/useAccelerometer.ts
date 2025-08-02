@@ -57,7 +57,12 @@ export const useAccelerometer = (): UseAccelerometerReturn => {
       setIsAvailable(true);
 
       const handleMotion = (event: DeviceMotionEvent) => {
-        const { x, y, z } = event.acceleration || { x: 0, y: 0, z: 0 };
+        // Correction : Gestion des valeurs null
+        const acceleration = event.acceleration;
+        const x = acceleration?.x ?? 0;
+        const y = acceleration?.y ?? 0;
+        const z = acceleration?.z ?? 0;
+        
         const magnitude = Math.sqrt(x * x + y * y + z * z);
 
         const newAcceleration = { x, y, z, magnitude };
