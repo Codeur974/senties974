@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 interface AdvancedPosition {
   latitude: number;
@@ -37,10 +37,8 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
 
   const positions = useRef<AdvancedPosition[]>([]);
   const lastAltitude = useRef<number | null>(null);
-  const startTime = useRef<number>(0);
-  const totalDistance = useRef<number>(0);
-  const lastPosition = useRef<AdvancedPosition | null>(null);
-  const speedInterval = useRef<NodeJS.Timeout | null>(null);
+  const speedHistory = useRef<number[]>([]);
+  const lastSpeedUpdate = useRef<number>(0);
 
   const calculateElevation = (newAltitude: number) => {
     if (lastAltitude.current !== null) {
@@ -57,25 +55,6 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
     setElevation(newAltitude);
   };
 
-  // NOUVEAU : Simuler une vitesse basée sur le temps
-  const simulateSpeed = () => {
-    if (!isTracking || !lastPosition.current) return;
-
-    const now = Date.now();
-    const timeElapsed = (now - startTime.current) / 1000; // secondes
-
-    // Vitesse simulée : 1.2 m/s (4.3 km/h) - vitesse de marche normale
-    const simulatedSpeed = 1.2;
-
-    setCurrentSpeed(simulatedSpeed);
-    setMaxSpeed((prev) => Math.max(prev, simulatedSpeed));
-
-    // Vitesse moyenne basée sur le temps écoulé
-    const averageSpeedValue =
-      timeElapsed > 0 ? totalDistance.current / timeElapsed : simulatedSpeed;
-    setAverageSpeed(averageSpeedValue);
-  };
-
   const calculateSpeed = (newPosition: AdvancedPosition) => {
     if (positions.current.length > 0) {
       const lastPos = positions.current[positions.current.length - 1];
@@ -83,18 +62,46 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
 
       if (timeDiff > 0) {
         const distance = calculateDistance(lastPos, newPosition);
-        totalDistance.current += distance;
+        const instantSpeed = distance / timeDiff; // m/s
 
-        // Si on a bougé significativement, utiliser le GPS
-        if (distance > 2) {
-          // Plus de 2m
-          const gpsSpeed = distance / timeDiff;
-          setCurrentSpeed(gpsSpeed);
-          setMaxSpeed((prev) => Math.max(prev, gpsSpeed));
+        // FILTRAGE INTELLIGENT : Utiliser plusieurs points pour lisser la vitesse
+        if (instantSpeed > 0.01) {
+          // Seuil très bas pour détecter tout mouvement
+          speedHistory.current.push(instantSpeed);
+
+          // Garder seulement les 5 dernières vitesses
+          if (speedHistory.current.length > 5) {
+            speedHistory.current.shift();
+          }
+
+          // Calculer la vitesse moyenne sur les derniers points
+          const avgSpeed =
+            speedHistory.current.reduce((a, b) => a + b, 0) /
+            speedHistory.current.length;
+
+          // Filtrer les valeurs aberrantes
+          const filteredSpeed = Math.min(avgSpeed, 10.0); // Max 36 km/h
+
+          setCurrentSpeed(filteredSpeed);
+          setMaxSpeed((prev) => Math.max(prev, filteredSpeed));
+
+          // Calculer la vitesse moyenne sur tout le trajet
+          const totalDistance = positions.current.reduce(
+            (total, pos, index) => {
+              if (index > 0) {
+                return (
+                  total + calculateDistance(positions.current[index - 1], pos)
+                );
+              }
+              return total;
+            },
+            0
+          );
+
+          const totalTime =
+            (newPosition.timestamp - positions.current[0].timestamp) / 1000;
+          setAverageSpeed(totalTime > 0 ? totalDistance / totalTime : 0);
         }
-        // Sinon, garder la vitesse simulée
-
-        lastPosition.current = newPosition;
       }
     }
   };
@@ -122,12 +129,8 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
       setIsTracking(true);
       positions.current = [];
       lastAltitude.current = null;
-      startTime.current = Date.now();
-      totalDistance.current = 0;
-      lastPosition.current = null;
-
-      // Démarrer la simulation de vitesse
-      speedInterval.current = setInterval(simulateSpeed, 1000); // Mise à jour toutes les secondes
+      speedHistory.current = [];
+      lastSpeedUpdate.current = Date.now();
 
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
@@ -158,30 +161,13 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
         }
       );
 
-      return () => {
-        navigator.geolocation.clearWatch(watchId);
-        if (speedInterval.current) {
-          clearInterval(speedInterval.current);
-        }
-      };
+      return () => navigator.geolocation.clearWatch(watchId);
     }
   };
 
   const stopTracking = () => {
     setIsTracking(false);
-    if (speedInterval.current) {
-      clearInterval(speedInterval.current);
-    }
   };
-
-  // Nettoyer l'intervalle quand le composant se démonte
-  useEffect(() => {
-    return () => {
-      if (speedInterval.current) {
-        clearInterval(speedInterval.current);
-      }
-    };
-  }, []);
 
   return {
     position,
