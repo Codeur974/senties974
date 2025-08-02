@@ -46,12 +46,13 @@ export default function RunningInterface({
   const intensity = useIntensityDetection();
   const weather = useWeather();
 
-  // Récupérer la météo quand on a une position GPS
+  // Récupérer la météo même sans GPS actif
   useEffect(() => {
-    if (gps.position && !weather.weather) {
-      weather.fetchWeather(gps.position.latitude, gps.position.longitude);
+    if (!weather.weather) {
+      // Utiliser une position par défaut (La Réunion)
+      weather.fetchWeather(-21.1, 55.5); // Saint-Denis
     }
-  }, [gps.position]);
+  }, []);
 
   // Calculer les calories basées sur l'intensité réelle
   const calculateCalories = () => {

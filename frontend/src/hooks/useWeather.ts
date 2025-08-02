@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface WeatherData {
   temperature: number;
@@ -27,26 +27,26 @@ export const useWeather = (): UseWeatherReturn => {
     const now = new Date();
     const hour = now.getHours();
     const month = now.getMonth() + 1; // 1-12
-
+    
     // Détecter la région basée sur les coordonnées
     const isReunion =
       lat >= -21.5 && lat <= -20.5 && lng >= 55.0 && lng <= 56.0;
     const isMetropole =
       lat >= 41.0 && lat <= 51.0 && lng >= -5.0 && lng <= 10.0;
     const isTropical = lat >= -23.5 && lat <= 23.5; // Zone tropicale
-
+    
     // Heures de la journée
     const isNight = hour < 6 || hour > 22;
     const isMorning = hour >= 6 && hour < 12;
     const isAfternoon = hour >= 12 && hour < 18;
     const isEvening = hour >= 18 && hour <= 22;
-
+    
     let temperature, conditions, humidity, windSpeed;
-
+    
     if (isReunion) {
       // La Réunion - Climat tropical
       const isSummer = month >= 11 || month <= 4; // Été austral
-
+      
       if (isSummer) {
         temperature = isNight ? 22 + Math.random() * 4 : 28 + Math.random() * 7;
         conditions = isNight ? "Nuit chaude" : "Très chaud";
@@ -57,11 +57,12 @@ export const useWeather = (): UseWeatherReturn => {
         humidity = 60 + Math.random() * 20;
       }
       windSpeed = 10 + Math.random() * 15; // Alizés
+      
     } else if (isMetropole) {
       // Métropole - Climat tempéré
       const isSummer = month >= 6 && month <= 8; // Été
       const isWinter = month === 12 || month <= 2; // Hiver
-
+      
       if (isSummer) {
         temperature = isNight
           ? 15 + Math.random() * 5
@@ -80,12 +81,14 @@ export const useWeather = (): UseWeatherReturn => {
         humidity = 55 + Math.random() * 25;
       }
       windSpeed = 5 + Math.random() * 20;
+      
     } else if (isTropical) {
       // Autres zones tropicales
       temperature = isNight ? 20 + Math.random() * 8 : 28 + Math.random() * 8;
       conditions = isNight ? "Nuit chaude" : "Chaud";
       humidity = 65 + Math.random() * 25;
       windSpeed = 8 + Math.random() * 12;
+      
     } else {
       // Zone tempérée générale
       temperature = isNight ? 10 + Math.random() * 10 : 20 + Math.random() * 10;
@@ -93,7 +96,7 @@ export const useWeather = (): UseWeatherReturn => {
       humidity = 55 + Math.random() * 25;
       windSpeed = 5 + Math.random() * 15;
     }
-
+    
     return {
       temperature: Math.round(temperature),
       conditions,
@@ -103,6 +106,30 @@ export const useWeather = (): UseWeatherReturn => {
       icon: isNight ? "01n" : "01d",
     };
   };
+
+  // NOUVEAU : Initialiser la météo au chargement
+  useEffect(() => {
+    if (!weather) {
+      // Détecter automatiquement la position sur mobile
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            fetchWeather(latitude, longitude);
+          },
+          (error) => {
+            console.log("GPS non disponible:", error);
+            // Fallback : La Réunion par défaut
+            setWeather(getLocationBasedWeather(-21.1, 55.5));
+          },
+          { timeout: 5000, enableHighAccuracy: true }
+        );
+      } else {
+        // Pas de GPS, utiliser La Réunion par défaut
+        setWeather(getLocationBasedWeather(-21.1, 55.5));
+      }
+    }
+  }, []);
 
   const fetchWeather = async (lat: number, lng: number) => {
     setIsLoading(true);
