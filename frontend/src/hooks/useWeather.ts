@@ -133,7 +133,7 @@ export const useWeather = (): UseWeatherReturn => {
       console.error("Erreur météo:", err);
       setError("Impossible de récupérer la météo");
 
-      // Fallback intelligent basé sur la localisation
+      // IMPORTANT : Utiliser la nouvelle fonction avec les coordonnées
       setWeather(getLocationBasedWeather(lat, lng));
     } finally {
       setIsLoading(false);
