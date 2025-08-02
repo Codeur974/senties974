@@ -62,12 +62,12 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
         const distance = calculateDistance(lastPos, newPosition);
         const gpsSpeed = distance / timeDiff; // m/s
 
-        // AMÉLIORATION : Filtrer les vitesses aberrantes
-        const minSpeed = 0.05; // 0.05 m/s minimum (0.18 km/h)
+        // AMÉLIORATION : Seuils plus adaptés pour la marche
+        const minSpeed = 0.01; // 0.01 m/s minimum (0.036 km/h) - TRÈS BAS
         const maxSpeed = 20.0; // 20 m/s maximum (72 km/h)
-        
+
         let filteredSpeed = gpsSpeed;
-        
+
         // Si la vitesse est trop faible, on la met à 0
         if (gpsSpeed < minSpeed) {
           filteredSpeed = 0;
@@ -77,11 +77,17 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
           filteredSpeed = maxSpeed;
         }
 
-        setCurrentSpeed(filteredSpeed);
-        setMaxSpeed((prev) => Math.max(prev, filteredSpeed));
+        // AMÉLIORATION : Lissage de la vitesse pour éviter les sauts
+        const smoothingFactor = 0.3; // 30% de la nouvelle valeur
+        const smoothedSpeed =
+          currentSpeed * (1 - smoothingFactor) +
+          filteredSpeed * smoothingFactor;
+
+        setCurrentSpeed(smoothedSpeed);
+        setMaxSpeed((prev) => Math.max(prev, smoothedSpeed));
 
         // Calculer la vitesse moyenne seulement si on bouge
-        if (filteredSpeed > 0) {
+        if (smoothedSpeed > 0) {
           const totalDistance = positions.current.reduce(
             (total, pos, index) => {
               if (index > 0) {
