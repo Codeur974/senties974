@@ -30,50 +30,50 @@ export const useIntensityDetection = (): UseIntensityDetectionReturn => {
   const [effortScore, setEffortScore] = useState(0);
 
   const calculateIntensity = () => {
-    const speed = gps.currentSpeed; // m/s
-    const acceleration = accelerometer.acceleration.magnitude;
-    const isMoving = accelerometer.isMoving;
-    const stepRate = accelerometer.stepRate;
+    const speed = gps.currentSpeed || 0; // m/s
+    const acceleration = accelerometer.acceleration?.magnitude || 0;
+    const isMoving = accelerometer.isMoving || false;
+    const stepRate = accelerometer.stepRate || 0;
 
     // Score d'effort basé sur multiple facteurs
     let effortScore = 0;
 
-    // Vitesse (50% du score) - AUGMENTÉ
+    // Vitesse (70% du score) - ENCORE PLUS IMPORTANT
     if (speed > 0) {
       const speedKmh = speed * 3.6; // Convertir en km/h
-      const speedScore = Math.min(speedKmh * 2, 50); // Multiplicateur augmenté, max 50
+      const speedScore = Math.min(speedKmh * 4, 70); // Multiplicateur augmenté, max 70
       effortScore += speedScore;
     }
 
-    // Mouvement détecté (25% du score) - RÉDUIT
+    // Mouvement détecté (20% du score)
     if (isMoving) {
-      effortScore += 25;
+      effortScore += 20;
     }
 
-    // Taux de pas (15% du score) - RÉDUIT
+    // Taux de pas (10% du score) - RÉDUIT
     if (stepRate > 0) {
-      const stepScore = Math.min(stepRate, 15); // Max 15
+      const stepScore = Math.min(stepRate, 10); // Max 10
       effortScore += stepScore;
     }
 
-    // Accélération (10% du score)
-    const accelScore = Math.min(acceleration * 5, 10); // Multiplicateur réduit
-    effortScore += accelScore;
+    // Accélération (0% du score) - SUPPRIMÉ pour plus de réactivité
+    // const accelScore = Math.min(acceleration * 2, 5);
+    // effortScore += accelScore;
 
     effortScore = Math.min(effortScore, 100);
     setEffortScore(effortScore);
 
-    // Déterminer le niveau d'intensité - SEUILS RÉDUITS
+    // Déterminer le niveau d'intensité - SEUILS ENCORE PLUS BAS
     let level: "low" | "medium" | "high" | "very_high";
     let caloriesPerMinute: number;
 
-    if (effortScore < 15) { // RÉDUIT de 25 à 15
+    if (effortScore < 8) {
       level = "low";
       caloriesPerMinute = 3;
-    } else if (effortScore < 35) { // RÉDUIT de 50 à 35
+    } else if (effortScore < 20) {
       level = "medium";
       caloriesPerMinute = 6;
-    } else if (effortScore < 60) { // RÉDUIT de 75 à 60
+    } else if (effortScore < 40) {
       level = "high";
       caloriesPerMinute = 10;
     } else {
@@ -81,14 +81,14 @@ export const useIntensityDetection = (): UseIntensityDetectionReturn => {
       caloriesPerMinute = 15;
     }
 
-    // Déterminer la zone cardiaque (estimation) - SEUILS RÉDUITS
+    // Déterminer la zone cardiaque (estimation)
     let zone = "Zone 1 - Repos";
-    if (effortScore > 40) zone = "Zone 3 - Endurance"; // RÉDUIT de 60 à 40
-    else if (effortScore > 25) zone = "Zone 2 - Brûlage graisses"; // RÉDUIT de 40 à 25
-    else if (effortScore > 10) zone = "Zone 1 - Repos"; // RÉDUIT de 20 à 10
+    if (effortScore > 25) zone = "Zone 3 - Endurance";
+    else if (effortScore > 12) zone = "Zone 2 - Brûlage graisses";
+    else if (effortScore > 3) zone = "Zone 1 - Repos";
 
     setHeartRateZone(zone);
-    setIsActive(effortScore > 5); // RÉDUIT de 10 à 5
+    setIsActive(effortScore > 2);
 
     setIntensity({
       level,
@@ -97,8 +97,9 @@ export const useIntensityDetection = (): UseIntensityDetectionReturn => {
     });
   };
 
+  // MISE À JOUR PLUS FRÉQUENTE : 500ms au lieu de 1000ms
   useEffect(() => {
-    const interval = setInterval(calculateIntensity, 1000);
+    const interval = setInterval(calculateIntensity, 500);
     return () => clearInterval(interval);
   }, [
     gps.currentSpeed,
