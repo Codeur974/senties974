@@ -137,9 +137,12 @@ export default function Dashboard() {
               <p className="text-gray-600 mb-4">
                 Lance le tracking GPS et commence ton parcours
               </p>
-              <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors">
+              <Link
+                href="/activite-en-cours"
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors inline-block"
+              >
                 Démarrer
-              </button>
+              </Link>
             </div>
           </div>
 
