@@ -69,20 +69,20 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
           const now = Date.now();
           const timeDiff = now - lastMovementTime.current;
 
-          // AUGMENTER le seuil pour éviter les faux mouvements
-          if (magnitude > 1.2 && timeDiff > 200) { // Seuil plus élevé + délai plus long
+          // SEUIL ENCORE PLUS ÉLEVÉ pour éviter les faux mouvements
+          if (magnitude > 2.0 && timeDiff > 500) { // Seuil très élevé + délai très long
             movementHistory.current.push(magnitude);
 
-            // Garder seulement les 5 derniers mouvements (au lieu de 10)
-            if (movementHistory.current.length > 5) {
+            // Garder seulement les 3 derniers mouvements
+            if (movementHistory.current.length > 3) {
               movementHistory.current.shift();
             }
 
-            // RÉDUIRE le multiplicateur pour une vitesse plus réaliste
+            // RÉDUIRE ENCORE PLUS le multiplicateur
             const avgMovement =
               movementHistory.current.reduce((a, b) => a + b, 0) /
               movementHistory.current.length;
-            const estimatedSpeed = Math.min(avgMovement * 0.8, 2.0); // Multiplicateur réduit + max plus bas
+            const estimatedSpeed = Math.min(avgMovement * 0.3, 1.5); // Multiplicateur très faible
 
             setCurrentSpeed(estimatedSpeed);
             setMaxSpeed((prev) => Math.max(prev, estimatedSpeed));

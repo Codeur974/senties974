@@ -133,8 +133,8 @@ export const useWeather = (): UseWeatherReturn => {
     setError(null);
 
     try {
-      // API gratuite sans clé (wttr.in)
-      const response = await fetch(`https://wttr.in/?format=j1&lang=fr`);
+      // CORRECTION : Utiliser les coordonnées dans l'API
+      const response = await fetch(`https://wttr.in/${lat},${lng}?format=j1&lang=fr`);
 
       if (!response.ok) {
         throw new Error("Erreur lors de la récupération de la météo");
