@@ -54,57 +54,30 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
   };
 
   const calculateSpeed = (newPosition: AdvancedPosition) => {
-    // SOLUTION AMÉLIORÉE : Combiner vitesse native + calcul manuel
+    // APPROCHE ULTRA-SIMPLE : Vitesse GPS native + calcul direct
     const nativeSpeed = newPosition.speed; // m/s
 
     if (positions.current.length > 0) {
       const lastPos = positions.current[positions.current.length - 1];
-      const timeDiff = (newPosition.timestamp - lastPos.timestamp) / 1000; // en secondes
+      const timeDiff = (newPosition.timestamp - lastPos.timestamp) / 1000;
 
       if (timeDiff > 0) {
         const distance = calculateDistance(lastPos, newPosition);
-        const calculatedSpeed = distance / timeDiff; // m/s
+        const calculatedSpeed = distance / timeDiff;
 
-        // UTILISER LA MEILLEURE VITESSE
-        let finalSpeed = 0;
+        // UTILISER LA VITESSE LA PLUS ÉLEVÉE
+        const finalSpeed = Math.max(nativeSpeed || 0, calculatedSpeed);
 
-        // AMÉLIORATION : Seuils plus adaptés pour la course
-        if (nativeSpeed && nativeSpeed > 0.3) {
-          // Si vitesse native fiable (> 0.3 m/s), l'utiliser
-          finalSpeed = nativeSpeed;
-        } else if (calculatedSpeed > 0.05) {
-          // Seuil plus bas pour détecter plus de mouvements
-          finalSpeed = calculatedSpeed;
-        }
-
-        // LISSAGE ADAPTATIF : Plus réactif pour les changements rapides
-        if (finalSpeed > 0) {
-          let smoothingFactor = 0.5; // 50% par défaut (plus réactif)
-          
-          // Si la vitesse change beaucoup, être plus réactif
-          const speedChange = Math.abs(finalSpeed - currentSpeed);
-          if (speedChange > 0.8) {
-            // Changement de plus de 0.8 m/s (3 km/h)
-            smoothingFactor = 0.9; // 90% - très réactif
-          } else if (speedChange > 0.4) {
-            // Changement de plus de 0.4 m/s (1.4 km/h)
-            smoothingFactor = 0.7; // 70% - réactif
-          }
-          
-          const smoothedSpeed =
-            currentSpeed * (1 - smoothingFactor) + finalSpeed * smoothingFactor;
-
-          // AMÉLIORATION : Permettre des vitesses plus élevées
-          const maxSpeed = 15.0; // 15 m/s = 54 km/h max
-          const limitedSpeed = Math.min(smoothedSpeed, maxSpeed);
-
-          setCurrentSpeed(limitedSpeed);
-          setMaxSpeed((prev) => Math.max(prev, limitedSpeed));
+        // Pas de lissage, vitesse directe
+        if (finalSpeed > 0.01) {
+          // Seuil très bas
+          setCurrentSpeed(finalSpeed);
+          setMaxSpeed((prev) => Math.max(prev, finalSpeed));
         }
       }
     }
 
-    // Calculer la vitesse moyenne sur tout le trajet
+    // Vitesse moyenne
     if (positions.current.length > 0) {
       const totalDistance = positions.current.reduce((total, pos, index) => {
         if (index > 0) {
@@ -150,7 +123,7 @@ export const useAdvancedGPS = (): UseAdvancedGPSReturn => {
             longitude: position.coords.longitude,
             altitude: position.coords.altitude || 0,
             accuracy: position.coords.accuracy,
-            speed: position.coords.speed || 0, // VITESSE NATIVE
+            speed: position.coords.speed || 0,
             heading: position.coords.heading || 0,
             timestamp: position.timestamp,
           };
