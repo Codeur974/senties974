@@ -240,15 +240,6 @@ export default function ActiviteEnCours() {
           )}
         </div>
       </div>
-
-      {/* Bouton flottant pour les performances */}
-      <Link
-        href="/activites-sauvegardees"
-        className="fixed bottom-4 right-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-full shadow-lg transition-colors z-50 flex items-center space-x-2"
-      >
-        <span>📊</span>
-        <span>Mes performances</span>
-      </Link>
     </div>
   );
 }
