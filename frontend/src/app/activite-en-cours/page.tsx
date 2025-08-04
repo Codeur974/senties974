@@ -163,6 +163,25 @@ export default function ActiviteEnCours() {
           )}
         </div>
       </div>
+
+      <div className="fixed bottom-4 left-4 bg-black text-white p-2 z-50 rounded-lg shadow-lg">
+        <div>Distance: {activitySession.distance.toFixed(2)} m</div>
+        <div>Temps: {activitySession.time} s</div>
+        <div>
+          Vitesse:{" "}
+          {(
+            activitySession.distance /
+            1000 /
+            (activitySession.time / 3600)
+          ).toFixed(2)}{" "}
+          km/h
+        </div>
+        {activitySession.gpsError && (
+          <div className="text-red-400">
+            Erreur GPS: {activitySession.gpsError}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
