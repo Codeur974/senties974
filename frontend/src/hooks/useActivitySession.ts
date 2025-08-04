@@ -55,19 +55,23 @@ export function useActivitySession() {
             time: Date.now(), // temps en millisecondes
           };
 
-          setPosition(newPosition);
           setPoints((prevPoints) => {
             const updatedPoints = [...prevPoints, newPosition];
 
             if (prevPoints.length > 0) {
-              const lastPoint = prevPoints[prevPoints.length - 1];
+              const lastPoint = prevPoints[prevPoints.length - 1]; // ← ✅ Définition manquante ajoutée ici
               const distAdded = calculateDistance(lastPoint, newPosition);
-              setDistance((prevDist) => prevDist + distAdded);
 
-              // ✅ Calcul instantané de la vitesse (derniers points uniquement)
-              const timeDiff = (newPosition.time - lastPoint.time) / 1000; // secondes
-              const speed = distAdded / 1000 / (timeDiff / 3600); // km/h
-              setCurrentSpeed(speed);
+              if (distAdded > 2) {
+                setDistance((prevDist) => prevDist + distAdded);
+
+                // Calcul vitesse uniquement si on se déplace suffisamment
+                const timeDiff = (newPosition.time - lastPoint.time) / 1000;
+                const speed = distAdded / 1000 / (timeDiff / 3600);
+                setCurrentSpeed(speed);
+              } else {
+                setCurrentSpeed(0);
+              }
             }
 
             return updatedPoints;
