@@ -10,7 +10,8 @@ app.use(express.json());
 
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://sentiers974-frontend.vercel.app",
+
+  "https://senties974.vercel.app",
 ];
 app.use(
   cors({
