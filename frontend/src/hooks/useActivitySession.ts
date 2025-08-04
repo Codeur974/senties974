@@ -52,26 +52,29 @@ export function useActivitySession() {
           const newPosition = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-            time: Date.now(), // temps en millisecondes
+            time: Date.now(),
           };
 
+          setPosition(newPosition);
           setPoints((prevPoints) => {
             const updatedPoints = [...prevPoints, newPosition];
 
             if (prevPoints.length > 0) {
-              const lastPoint = prevPoints[prevPoints.length - 1]; // ← ✅ Définition manquante ajoutée ici
+              const lastPoint = prevPoints[prevPoints.length - 1];
               const distAdded = calculateDistance(lastPoint, newPosition);
 
               if (distAdded > 2) {
                 setDistance((prevDist) => prevDist + distAdded);
 
-                // Calcul vitesse uniquement si on se déplace suffisamment
                 const timeDiff = (newPosition.time - lastPoint.time) / 1000;
                 const speed = distAdded / 1000 / (timeDiff / 3600);
                 setCurrentSpeed(speed);
               } else {
                 setCurrentSpeed(0);
               }
+            } else {
+              // ✅ Cas spécial : Premier point GPS reçu
+              setCurrentSpeed(0);
             }
 
             return updatedPoints;
