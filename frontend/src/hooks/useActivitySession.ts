@@ -63,7 +63,8 @@ export function useActivitySession() {
               const lastPoint = prevPoints[prevPoints.length - 1];
               const distAdded = calculateDistance(lastPoint, newPosition);
 
-              if (distAdded > 2) {
+              if (distAdded >= 0.5) {
+                // ✅ seuil abaissé à 0.5 mètre
                 setDistance((prevDist) => prevDist + distAdded);
 
                 const timeDiff = (newPosition.time - lastPoint.time) / 1000;
@@ -73,7 +74,6 @@ export function useActivitySession() {
                 setCurrentSpeed(0);
               }
             } else {
-              // ✅ Cas spécial : Premier point GPS reçu
               setCurrentSpeed(0);
             }
 
