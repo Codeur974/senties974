@@ -10,10 +10,14 @@ export function useActivitySession() {
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(
     null
   );
-  const [points, setPoints] = useState<{ lat: number; lng: number }[]>([]);
+  const [points, setPoints] = useState<
+    { lat: number; lng: number; time: number }[]
+  >([]);
+
   const [gpsError, setGpsError] = useState<string | null>(null);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [currentSpeed, setCurrentSpeed] = useState(0); // vitesse instantanée
 
   // 2️⃣ EFFETS (useEffect) clairement groupés :
 
@@ -48,17 +52,22 @@ export function useActivitySession() {
           const newPosition = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
+            time: Date.now(), // temps en millisecondes
           };
 
           setPosition(newPosition);
           setPoints((prevPoints) => {
             const updatedPoints = [...prevPoints, newPosition];
 
-            // Calcul distance entre deux points
             if (prevPoints.length > 0) {
               const lastPoint = prevPoints[prevPoints.length - 1];
               const distAdded = calculateDistance(lastPoint, newPosition);
               setDistance((prevDist) => prevDist + distAdded);
+
+              // ✅ Calcul instantané de la vitesse (derniers points uniquement)
+              const timeDiff = (newPosition.time - lastPoint.time) / 1000; // secondes
+              const speed = distAdded / 1000 / (timeDiff / 3600); // km/h
+              setCurrentSpeed(speed);
             }
 
             return updatedPoints;
@@ -69,11 +78,10 @@ export function useActivitySession() {
       );
     }
 
-    // Nettoyage propre
     return () => {
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     };
-  }, [status]); // <= même dépendance que le timer
+  }, [status]);
 
   // 3️⃣ FONCTIONS clairement groupées :
   const startSession = () => {
@@ -106,6 +114,7 @@ export function useActivitySession() {
     position,
     points,
     gpsError,
+    currentSpeed,
     isRunning: status === "running",
     isPaused: status === "paused",
     startSession,
